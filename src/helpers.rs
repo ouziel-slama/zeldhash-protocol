@@ -6,12 +6,22 @@ use bitcoin::{
     script::Instruction,
     sighash::{EcdsaSighashType, TapSighashType},
     taproot::Signature as SchnorrSignature,
-    ScriptBuf, TxIn, Txid,
+    Address, Network, Script, ScriptBuf, TxIn, Txid,
 };
 use ciborium::de::from_reader;
 use xxhash_rust::xxh3::xxh3_128;
 
 use crate::types::{Amount, UtxoKey};
+
+/// Extracts the Bitcoin address from a script, if possible.
+///
+/// Returns `None` for non-standard scripts (e.g., bare multisig, OP_RETURN, unknown scripts).
+/// Supported script types: P2PKH, P2SH, P2WPKH, P2WSH, P2TR (Taproot).
+pub fn extract_address(script: &Script, network: Network) -> Option<String> {
+    Address::from_script(script, network)
+        .ok()
+        .map(|addr| addr.to_string())
+}
 
 /// Returns true if bytes resemble a DER-encoded ECDSA signature plus sighash byte.
 fn looks_like_der_signature(data: &[u8]) -> bool {
@@ -257,7 +267,8 @@ pub fn all_inputs_sighash_all(inputs: &[TxIn]) -> bool {
 mod tests {
     use super::*;
     use bitcoin::{
-        hashes::Hash, opcodes, script::PushBytesBuf, OutPoint, ScriptBuf, Sequence, Txid, Witness,
+        hashes::Hash, opcodes, script::PushBytesBuf, Network, OutPoint, ScriptBuf, Sequence, Txid,
+        Witness,
     };
     use ciborium::ser::into_writer;
     use std::str::FromStr;
@@ -801,5 +812,105 @@ mod tests {
 
         // Should still work because we found valid signatures
         assert!(all_inputs_sighash_all(&[input]));
+    }
+
+    #[test]
+    fn extract_address_returns_none_for_op_return() {
+        let script = build_op_return_script(b"ZELD");
+        assert!(extract_address(&script, Network::Bitcoin).is_none());
+    }
+
+    #[test]
+    fn extract_address_returns_none_for_unknown_script() {
+        // OP_CHECKSIG alone is not a valid address script
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::all::OP_CHECKSIG)
+            .into_script();
+        assert!(extract_address(&script, Network::Bitcoin).is_none());
+    }
+
+    #[test]
+    fn extract_address_returns_address_for_p2pkh() {
+        // P2PKH: OP_DUP OP_HASH160 <20-byte-hash> OP_EQUALVERIFY OP_CHECKSIG
+        let hash = [0xab; 20];
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::all::OP_DUP)
+            .push_opcode(opcodes::all::OP_HASH160)
+            .push_slice(hash)
+            .push_opcode(opcodes::all::OP_EQUALVERIFY)
+            .push_opcode(opcodes::all::OP_CHECKSIG)
+            .into_script();
+        let addr = extract_address(&script, Network::Bitcoin);
+        assert!(addr.is_some());
+        assert!(addr.unwrap().starts_with('1')); // Mainnet P2PKH starts with '1'
+    }
+
+    #[test]
+    fn extract_address_returns_address_for_p2sh() {
+        // P2SH: OP_HASH160 <20-byte-hash> OP_EQUAL
+        let hash = [0xcd; 20];
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::all::OP_HASH160)
+            .push_slice(hash)
+            .push_opcode(opcodes::all::OP_EQUAL)
+            .into_script();
+        let addr = extract_address(&script, Network::Bitcoin);
+        assert!(addr.is_some());
+        assert!(addr.unwrap().starts_with('3')); // Mainnet P2SH starts with '3'
+    }
+
+    #[test]
+    fn extract_address_returns_address_for_p2wpkh() {
+        // P2WPKH: OP_0 <20-byte-hash>
+        let hash = [0xef; 20];
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::OP_0)
+            .push_slice(hash)
+            .into_script();
+        let addr = extract_address(&script, Network::Bitcoin);
+        assert!(addr.is_some());
+        assert!(addr.unwrap().starts_with("bc1q")); // Mainnet P2WPKH bech32
+    }
+
+    #[test]
+    fn extract_address_returns_address_for_p2wsh() {
+        // P2WSH: OP_0 <32-byte-hash>
+        let hash = [0x12; 32];
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::OP_0)
+            .push_slice(hash)
+            .into_script();
+        let addr = extract_address(&script, Network::Bitcoin);
+        assert!(addr.is_some());
+        assert!(addr.unwrap().starts_with("bc1q")); // Mainnet P2WSH bech32
+    }
+
+    #[test]
+    fn extract_address_returns_address_for_p2tr() {
+        // P2TR: OP_1 <32-byte-x-only-pubkey>
+        let pubkey = [0x34; 32];
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::all::OP_PUSHNUM_1)
+            .push_slice(pubkey)
+            .into_script();
+        let addr = extract_address(&script, Network::Bitcoin);
+        assert!(addr.is_some());
+        assert!(addr.unwrap().starts_with("bc1p")); // Mainnet P2TR bech32m
+    }
+
+    #[test]
+    fn extract_address_uses_correct_network_prefix() {
+        // P2WPKH on testnet
+        let hash = [0xef; 20];
+        let script = ScriptBuf::builder()
+            .push_opcode(opcodes::OP_0)
+            .push_slice(hash)
+            .into_script();
+
+        let mainnet_addr = extract_address(&script, Network::Bitcoin).unwrap();
+        let testnet_addr = extract_address(&script, Network::Testnet4).unwrap();
+
+        assert!(mainnet_addr.starts_with("bc1"));
+        assert!(testnet_addr.starts_with("tb1"));
     }
 }

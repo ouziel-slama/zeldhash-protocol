@@ -19,6 +19,10 @@ pub struct ZeldOutput {
     pub distribution: Amount,
     /// Output index within the transaction.
     pub vout: u32,
+    /// Bitcoin address for the reward-carrying output only (first non-OP_RETURN),
+    /// if determinable. `None` for non-standard scripts (e.g., bare multisig),
+    /// or for non-reward outputs where no address is stored.
+    pub address: Option<String>,
 }
 
 /// Represents a transaction input with ZELD-relevant data.
@@ -65,6 +69,10 @@ pub struct Reward {
     pub reward: Amount,
     /// Leading zero count of the transaction ID.
     pub zero_count: u8,
+    /// Bitcoin address for the reward-carrying output only (first non-OP_RETURN),
+    /// if determinable. `None` for non-standard scripts (e.g., bare multisig),
+    /// or for non-reward outputs where no address is stored.
+    pub address: Option<String>,
 }
 
 /// Fully processed block statistics and reward set.

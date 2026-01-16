@@ -1,3 +1,5 @@
+use bitcoin::Network;
+
 use crate::types::Amount;
 
 /// Static parameters that describe how the ZELD protocol behaves on a network.
@@ -9,6 +11,8 @@ pub struct ZeldConfig {
     pub base_reward: Amount,
     /// Prefix bytes for custom distribution OP_RETURN data.
     pub zeld_prefix: &'static [u8],
+    /// Bitcoin network (used for address encoding).
+    pub network: Network,
 }
 
 /// Bitcoin networks supported by the ZELD protocol.
@@ -26,6 +30,7 @@ impl ZeldConfig {
         min_zero_count: 6,
         base_reward: 4_096 * 10u64.pow(8),
         zeld_prefix: b"ZELD",
+        network: Network::Bitcoin,
     };
 
     /// ZELD parameters for Bitcoin testnet4.
@@ -33,6 +38,7 @@ impl ZeldConfig {
         min_zero_count: 2,
         base_reward: 4_096 * 10u64.pow(8),
         zeld_prefix: b"ZELD",
+        network: Network::Testnet4,
     };
 
     /// ZELD parameters for Bitcoin signet.
@@ -40,6 +46,7 @@ impl ZeldConfig {
         min_zero_count: 2,
         base_reward: 4_096 * 10u64.pow(8),
         zeld_prefix: b"ZELD",
+        network: Network::Signet,
     };
 
     /// ZELD parameters for Bitcoin regtest.
@@ -47,6 +54,7 @@ impl ZeldConfig {
         min_zero_count: 2,
         base_reward: 4_096 * 10u64.pow(8),
         zeld_prefix: b"ZELD",
+        network: Network::Regtest,
     };
 
     /// Returns the configuration associated with the provided Bitcoin network.
@@ -81,19 +89,39 @@ mod tests {
         min_zero_count: u8,
         base_reward: Amount,
         prefix: &'static [u8],
+        network: Network,
     ) {
         assert_eq!(config.min_zero_count, min_zero_count);
         assert_eq!(config.base_reward, base_reward);
         assert_eq!(config.zeld_prefix, prefix);
+        assert_eq!(config.network, network);
     }
 
     #[test]
     fn constants_expose_expected_parameters() {
         let base_reward = 4_096 * 10u64.pow(8);
-        assert_config(ZeldConfig::MAINNET, 6, base_reward, b"ZELD");
-        assert_config(ZeldConfig::TESTNET4, 2, base_reward, b"ZELD");
-        assert_config(ZeldConfig::SIGNET, 2, base_reward, b"ZELD");
-        assert_config(ZeldConfig::REGTEST, 2, base_reward, b"ZELD");
+        assert_config(
+            ZeldConfig::MAINNET,
+            6,
+            base_reward,
+            b"ZELD",
+            Network::Bitcoin,
+        );
+        assert_config(
+            ZeldConfig::TESTNET4,
+            2,
+            base_reward,
+            b"ZELD",
+            Network::Testnet4,
+        );
+        assert_config(ZeldConfig::SIGNET, 2, base_reward, b"ZELD", Network::Signet);
+        assert_config(
+            ZeldConfig::REGTEST,
+            2,
+            base_reward,
+            b"ZELD",
+            Network::Regtest,
+        );
     }
 
     #[test]

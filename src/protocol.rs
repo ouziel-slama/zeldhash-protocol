@@ -3,8 +3,8 @@ use bitcoin::Block;
 use crate::{
     config::ZeldConfig,
     helpers::{
-        all_inputs_sighash_all, calculate_reward, compute_utxo_key, leading_zero_count,
-        parse_op_return,
+        all_inputs_sighash_all, calculate_reward, compute_utxo_key, extract_address,
+        leading_zero_count, parse_op_return,
     },
     store::ZeldStore,
     types::{
@@ -73,6 +73,12 @@ impl ZeldProtocol {
                     }
                     continue;
                 }
+                // Extract address only for the first non-OP_RETURN output (receives the reward).
+                let address = if outputs.is_empty() {
+                    extract_address(&out.script_pubkey, self.config.network)
+                } else {
+                    None
+                };
                 let value = out.value.to_sat();
                 outputs.push(ZeldOutput {
                     utxo_key: compute_utxo_key(&txid, vout as u32),
@@ -80,6 +86,7 @@ impl ZeldProtocol {
                     reward: 0,
                     distribution: 0,
                     vout: vout as u32,
+                    address,
                 });
             }
 
@@ -167,6 +174,7 @@ impl ZeldProtocol {
                         vout: output.vout,
                         reward: output.reward,
                         zero_count: tx.zero_count,
+                        address: output.address.clone(),
                     });
                     total_reward += output.reward;
                 }
@@ -258,7 +266,7 @@ mod tests {
         pow::CompactTarget,
         script::PushBytesBuf,
         transaction::Version,
-        Amount as BtcAmount, BlockHash, OutPoint, ScriptBuf, Sequence, Transaction, TxIn,
+        Amount as BtcAmount, BlockHash, Network, OutPoint, ScriptBuf, Sequence, Transaction, TxIn,
         TxMerkleNode, TxOut, Txid, Witness,
     };
     use ciborium::ser::into_writer;
@@ -449,6 +457,7 @@ mod tests {
             reward,
             distribution,
             vout,
+            address: None,
         }
     }
 
@@ -491,6 +500,7 @@ mod tests {
             min_zero_count: 65,
             base_reward: 500,
             zeld_prefix: b"ZELD",
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -544,6 +554,7 @@ mod tests {
             min_zero_count: 32,
             base_reward: 777,
             zeld_prefix: b"ZELD",
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -569,6 +580,7 @@ mod tests {
             min_zero_count: 0,
             base_reward: 1_024,
             zeld_prefix: prefix,
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -631,6 +643,7 @@ mod tests {
             min_zero_count: 0,
             base_reward: 512,
             zeld_prefix: b"ZELD",
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -668,6 +681,7 @@ mod tests {
             min_zero_count: 0,
             base_reward: 1_024,
             zeld_prefix: prefix,
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -707,6 +721,7 @@ mod tests {
             min_zero_count: 0,
             base_reward: 2_048,
             zeld_prefix: prefix,
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -750,6 +765,7 @@ mod tests {
             min_zero_count: 0,
             base_reward: 512,
             zeld_prefix: prefix,
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -792,6 +808,7 @@ mod tests {
             min_zero_count: 0,
             base_reward: 0,
             zeld_prefix: b"ZELD",
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 
@@ -862,6 +879,7 @@ mod tests {
             min_zero_count: best_zeroes,
             base_reward: 4_096,
             zeld_prefix: b"ZELD",
+            network: Network::Bitcoin,
         };
         let protocol = ZeldProtocol::new(config);
 

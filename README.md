@@ -97,6 +97,7 @@ let custom = ZeldConfig {
     min_zero_count: 8,
     base_reward: 8_192,
     zeld_prefix: b"ZELD",
+    network: bitcoin::Network::Bitcoin,
 };
 ```
 
