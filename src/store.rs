@@ -1,4 +1,4 @@
-use crate::types::{Amount, UtxoKey};
+use crate::types::{Balance, UtxoKey};
 
 /// Abstraction over the persistence layer used by `ZeldProtocol`.
 ///
@@ -6,13 +6,13 @@ use crate::types::{Amount, UtxoKey};
 /// be used. Higher-level lifecycle management (transactions, staging, etc.) is
 /// left to concrete implementations.
 pub trait ZeldStore {
-    /// Fetches the ZELD balance attached to a given UTXO key.
-    fn get(&mut self, key: &UtxoKey) -> Amount;
+    /// Fetches the stored ZELD balance attached to a given UTXO key.
+    ///
+    /// Positive values represent spendable ZELD, negative values are spent tombstones,
+    /// and `0` means either no entry or an empty balance.
+    fn get(&mut self, key: &UtxoKey) -> Balance;
 
-    /// Removes the entry for the UTXO key, returning its current ZELD balance.
-    /// Implementations should return `0` if the key is not present.
-    fn pop(&mut self, key: &UtxoKey) -> Amount;
-
-    /// Sets the ZELD balance assigned to a UTXO key.
-    fn set(&mut self, key: UtxoKey, value: Amount);
+    /// Sets the stored ZELD balance assigned to a UTXO key.
+    /// Use negative values to mark spent UTXOs.
+    fn set(&mut self, key: UtxoKey, value: Balance);
 }

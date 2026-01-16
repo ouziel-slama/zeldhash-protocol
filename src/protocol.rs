@@ -188,12 +188,16 @@ impl ZeldProtocol {
                 .collect::<Vec<_>>();
 
             // Calculate the total ZELD input from the inputs.
-            let mut total_zeld_input = 0;
+            let mut total_zeld_input: u64 = 0;
             for input in &tx.inputs {
-                let zeld_input = store.pop(&input.utxo_key);
-                total_zeld_input += zeld_input;
+                let zeld_input = store.get(&input.utxo_key);
                 if zeld_input > 0 {
+                    let amount = u64::try_from(zeld_input).expect("zeld balance overflow");
+                    total_zeld_input = total_zeld_input
+                        .checked_add(amount)
+                        .expect("zeld input overflow");
                     utxo_spent_count += 1;
+                    store.set(input.utxo_key, -zeld_input);
                 }
             }
 
@@ -235,7 +239,8 @@ impl ZeldProtocol {
                 .enumerate()
                 .for_each(|(i, value)| {
                     if *value > 0 {
-                        store.set(tx.outputs[i].utxo_key, *value);
+                        let balance = i64::try_from(*value).expect("zeld balance overflow");
+                        store.set(tx.outputs[i].utxo_key, balance);
                         new_utxo_count += 1;
                     }
                 });
@@ -257,7 +262,7 @@ mod tests {
     #![allow(unexpected_cfgs)]
 
     use super::*;
-    use crate::types::{Amount, UtxoKey};
+    use crate::types::{Amount, Balance, UtxoKey};
     use bitcoin::{
         absolute::LockTime,
         block::{Block as BitcoinBlock, Header as BlockHeader, Version as BlockVersion},
@@ -444,6 +449,10 @@ mod tests {
         [byte; 12]
     }
 
+    fn amount_to_balance(amount: u64) -> Balance {
+        i64::try_from(amount).expect("zeld balance overflow")
+    }
+
     fn make_zeld_output(
         utxo_key: UtxoKey,
         value: Amount,
@@ -463,11 +472,11 @@ mod tests {
 
     #[derive(Default)]
     struct MockStore {
-        balances: HashMap<UtxoKey, Amount>,
+        balances: HashMap<UtxoKey, Balance>,
     }
 
     impl MockStore {
-        fn with_entries(entries: &[(UtxoKey, Amount)]) -> Self {
+        fn with_entries(entries: &[(UtxoKey, Balance)]) -> Self {
             let mut balances = HashMap::new();
             for (key, value) in entries {
                 balances.insert(*key, *value);
@@ -475,21 +484,17 @@ mod tests {
             Self { balances }
         }
 
-        fn balance(&self, key: &UtxoKey) -> Amount {
+        fn balance(&self, key: &UtxoKey) -> Balance {
             *self.balances.get(key).unwrap_or(&0)
         }
     }
 
     impl ZeldStore for MockStore {
-        fn get(&mut self, key: &UtxoKey) -> Amount {
+        fn get(&mut self, key: &UtxoKey) -> Balance {
             *self.balances.get(key).unwrap_or(&0)
         }
 
-        fn pop(&mut self, key: &UtxoKey) -> Amount {
-            self.balances.remove(key).unwrap_or(0)
-        }
-
-        fn set(&mut self, key: UtxoKey, value: Amount) {
+        fn set(&mut self, key: UtxoKey, value: Balance) {
             self.balances.insert(key, value);
         }
     }
@@ -960,11 +965,14 @@ mod tests {
 
         let result = protocol.process_block(&block, &mut store);
 
-        assert_eq!(store.balance(&input_a), 0);
+        assert_eq!(store.balance(&input_a), -60);
         assert_eq!(store.balance(&input_b), 0);
 
-        assert_eq!(store.get(&output_a), outputs[0].reward + 60);
-        assert_eq!(store.get(&output_b), outputs[1].reward);
+        assert_eq!(
+            store.get(&output_a),
+            amount_to_balance(outputs[0].reward + 60)
+        );
+        assert_eq!(store.get(&output_b), amount_to_balance(outputs[1].reward));
 
         // Verify ProcessedZeldBlock fields
         // input_a has 60, input_b has 0, so only 1 is counted as spent
@@ -1051,9 +1059,21 @@ mod tests {
 
         let result = protocol.process_block(&block, &mut store);
 
-        for key in [capped_input, exact_input, remainder_input] {
-            assert_eq_cov!(store.balance(&key), 0, "inputs must be burned after use");
-        }
+        assert_eq_cov!(
+            store.balance(&capped_input),
+            -50,
+            "inputs must be marked as spent"
+        );
+        assert_eq_cov!(
+            store.balance(&exact_input),
+            -25,
+            "inputs must be marked as spent"
+        );
+        assert_eq_cov!(
+            store.balance(&remainder_input),
+            -50,
+            "inputs must be marked as spent"
+        );
 
         // Verify ProcessedZeldBlock fields
         assert_eq_cov!(
@@ -1066,23 +1086,35 @@ mod tests {
         assert_eq_cov!(result.new_utxo_count, expected_new_utxos as u64);
 
         let capped_first_balance = store.balance(&capped_output_a);
-        assert_eq_cov!(capped_first_balance, capped_outputs[0].reward + 50);
+        assert_eq_cov!(
+            capped_first_balance,
+            amount_to_balance(capped_outputs[0].reward + 50)
+        );
         let capped_second_balance = store.balance(&capped_output_b);
-        assert_eq_cov!(capped_second_balance, capped_outputs[1].reward);
+        assert_eq_cov!(
+            capped_second_balance,
+            amount_to_balance(capped_outputs[1].reward)
+        );
 
         for (output, requested) in exact_outputs.iter().zip(exact_requested.iter()) {
             let balance = store.balance(&output.utxo_key);
             assert_eq_cov!(
                 balance,
-                output.reward + requested,
+                amount_to_balance(output.reward + requested),
                 "exact requests must be honored"
             );
         }
 
         let remainder_first_balance = store.balance(&remainder_output_a);
-        assert_eq_cov!(remainder_first_balance, remainder_outputs[0].reward + 40);
+        assert_eq_cov!(
+            remainder_first_balance,
+            amount_to_balance(remainder_outputs[0].reward + 40)
+        );
         let remainder_second_balance = store.balance(&remainder_output_b);
-        assert_eq_cov!(remainder_second_balance, remainder_outputs[1].reward + 10);
+        assert_eq_cov!(
+            remainder_second_balance,
+            amount_to_balance(remainder_outputs[1].reward + 10)
+        );
     }
 
     #[test]
@@ -1121,8 +1153,8 @@ mod tests {
 
         // Requested 20 to the second output; remainder (30) stays with the first,
         // which already carried the mining reward (100).
-        assert_eq_cov!(store.balance(&reward_output), 130);
-        assert_eq_cov!(store.balance(&secondary_output), 20);
+        assert_eq_cov!(store.balance(&reward_output), amount_to_balance(130));
+        assert_eq_cov!(store.balance(&secondary_output), amount_to_balance(20));
         assert_eq_cov!(result.total_reward, 100);
         assert_eq_cov!(result.utxo_spent_count, 1);
         assert_eq_cov!(result.new_utxo_count, 2);
@@ -1162,7 +1194,7 @@ mod tests {
 
         // Requested 70 while only 25 are available; everything (25) falls back to the first
         // output, which already carries the mining reward (64).
-        assert_eq_cov!(store.balance(&reward_output), 89);
+        assert_eq_cov!(store.balance(&reward_output), amount_to_balance(89));
         assert_eq_cov!(store.balance(&secondary_output), 0);
         assert_eq_cov!(result.total_reward, 64);
         assert_eq_cov!(result.utxo_spent_count, 1);
@@ -1228,8 +1260,51 @@ mod tests {
         assert_eq_cov!(
             store.balance(&zero_input),
             0,
-            "input should be removed even when it carries no ZELD"
+            "input should remain zero when it carries no ZELD"
         );
+    }
+
+    #[test]
+    fn process_block_ignores_already_spent_inputs() {
+        let protocol = ZeldProtocol::new(ZeldConfig::default());
+
+        let spent_input = fixed_utxo_key(0xC0);
+        let mut store = MockStore::with_entries(&[(spent_input, -40)]);
+
+        let reward_output = fixed_utxo_key(0xC1);
+        let outputs = vec![make_zeld_output(reward_output, 0, 10, 0, 0)];
+
+        let tx = ZeldTransaction {
+            txid: deterministic_txid(0x66),
+            inputs: vec![ZeldInput {
+                utxo_key: spent_input,
+            }],
+            outputs: outputs.clone(),
+            zero_count: 0,
+            reward: 10,
+            has_op_return_distribution: false,
+        };
+
+        let block = PreProcessedZeldBlock {
+            transactions: vec![tx],
+            max_zero_count: 0,
+        };
+
+        let result = protocol.process_block(&block, &mut store);
+
+        assert_eq_cov!(
+            store.balance(&spent_input),
+            -40,
+            "already spent inputs must remain untouched"
+        );
+        assert_eq_cov!(
+            store.balance(&reward_output),
+            amount_to_balance(outputs[0].reward),
+            "rewards still attach to outputs"
+        );
+        assert_eq_cov!(result.utxo_spent_count, 0);
+        assert_eq_cov!(result.new_utxo_count, 1);
+        assert_eq_cov!(result.total_reward, 10);
     }
 
     #[test]
@@ -1277,16 +1352,20 @@ mod tests {
 
         for output in &reward_only_outputs {
             let balance = store.balance(&output.utxo_key);
-            assert_eq_cov!(balance, output.reward, "no input keeps rewards untouched");
+            assert_eq_cov!(
+                balance,
+                amount_to_balance(output.reward),
+                "no input keeps rewards untouched"
+            );
         }
 
         assert_eq!(store.balance(&zero_input), 0);
-        assert_eq!(store.balance(&producing_input), 0);
+        assert_eq!(store.balance(&producing_input), -25);
         let store_entries = store.balances.len();
         assert_eq_cov!(
             store_entries,
-            reward_only_outputs.len(),
-            "inputs without outputs must fully leave the store"
+            reward_only_outputs.len() + 2,
+            "spent inputs must remain as tombstones"
         );
 
         // Verify ProcessedZeldBlock fields

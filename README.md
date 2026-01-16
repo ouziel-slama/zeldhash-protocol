@@ -43,22 +43,18 @@ The protocol processes blocks in two phases:
 2. **Processing** (`process_block`): Updates ZELD balances in the store. This phase is **sequential** — blocks must be processed in order, one after another.
 
 ```rust
-use zeldhash_protocol::{ZeldProtocol, ZeldConfig, ZeldNetwork, ZeldStore, Amount, UtxoKey};
+use zeldhash_protocol::{ZeldProtocol, ZeldConfig, ZeldNetwork, ZeldStore, Balance, UtxoKey};
 
 // Implement your own store
 struct MyStore { /* ... */ }
 
 impl ZeldStore for MyStore {
-    fn get(&mut self, key: &UtxoKey) -> Amount {
-        // Fetch ZELD balance for the given UTXO key
+    fn get(&mut self, key: &UtxoKey) -> Balance {
+        // Fetch stored balance (positive = spendable, negative = spent tombstone)
     }
 
-    fn pop(&mut self, key: &UtxoKey) -> Amount {
-        // Remove the entry for the given UTXO key, returning the balance
-    }
-    
-    fn set(&mut self, key: UtxoKey, value: Amount) {
-        // Store ZELD balance for the given UTXO key
+    fn set(&mut self, key: UtxoKey, value: Balance) {
+        // Store balance for the given UTXO key
     }
 }
 
@@ -141,6 +137,7 @@ Include an OP_RETURN output with:
 | `ZeldTransaction` | Transaction with ZELD-relevant fields |
 | `UtxoKey` | 12-byte key identifying a UTXO (`[u8; 12]`) |
 | `Amount` | ZELD balance type (`u64`) |
+| `Balance` | Stored balance type (`i64`); values outside `i64` will panic during processing |
 
 ## License
 

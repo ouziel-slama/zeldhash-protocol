@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-01-16
+
+### Added
+
+- `extract_address` helper function to convert output scripts to Bitcoin addresses
+- `address` field on `ZeldOutput` and `Reward` types (populated for the first non-OP_RETURN output only)
+- `network` field on `ZeldConfig` for address encoding
+
+### Changed
+
+- **BREAKING**: `ZeldStore` now stores signed `Balance` values (`i64`) and no longer removes spent entries
+  - Spent UTXOs are retained as negative tombstones (e.g., `-50`) to mark prior spends
+  - `ZeldStore::pop` has been removed; use `get` + `set` to manage balances
+  - Processing panics if a balance or output exceeds the `i64` range
+
 ## [0.5.0] - 2026-01-10
 
 ### Added
@@ -106,7 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom distribution via OP_RETURN with CBOR-encoded data
 - Comprehensive test suite with 28 unit tests
 
-[Unreleased]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.3.0...v0.3.1

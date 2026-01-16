@@ -38,4 +38,6 @@ pub mod types;
 pub use config::{ZeldConfig, ZeldNetwork};
 pub use protocol::ZeldProtocol;
 pub use store::ZeldStore;
-pub use types::{Amount, PreProcessedZeldBlock, UtxoKey, ZeldInput, ZeldOutput, ZeldTransaction};
+pub use types::{
+    Amount, Balance, PreProcessedZeldBlock, UtxoKey, ZeldInput, ZeldOutput, ZeldTransaction,
+};

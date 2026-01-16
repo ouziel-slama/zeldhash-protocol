@@ -3,8 +3,12 @@ use bitcoin::Txid;
 /// 12-byte key identifying a UTXO, derived from txid and vout via xxh3-128.
 pub type UtxoKey = [u8; 12];
 
-/// ZELD balance type (unsigned 64-bit integer).
+/// ZELD amount type (unsigned 64-bit integer).
 pub type Amount = u64;
+
+/// Stored ZELD balance type (signed 64-bit integer).
+/// Positive values represent spendable balances, negative values are spent tombstones.
+pub type Balance = i64;
 
 /// Represents a transaction output with ZELD-relevant data.
 #[derive(Debug, Clone)]
