@@ -121,12 +121,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom distribution via OP_RETURN with CBOR-encoded data
 - Comprehensive test suite with 28 unit tests
 
-[Unreleased]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.5.0...v0.6.0
-[0.5.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.3.1...v0.4.0
-[0.3.1]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.2.3...v0.3.0
-[0.1.1]: https://github.com/ouziel-slama/zeldhash-protocol/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/ouziel-slama/zeldhash-protocol/releases/tag/v0.1.0
+[Unreleased]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.2.3...v0.3.0
+[0.1.1]: https://github.com/zeldhash/zeldhash-protocol/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/zeldhash/zeldhash-protocol/releases/tag/v0.1.0
 

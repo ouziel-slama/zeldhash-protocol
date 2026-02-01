@@ -1,9 +1,9 @@
 # zeldhash-protocol
 
-[![Tests](https://github.com/ouziel-slama/zeldhash-protocol/actions/workflows/tests.yml/badge.svg)](https://github.com/ouziel-slama/zeldhash-protocol/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/github/ouziel-slama/zeldhash-protocol/graph/badge.svg?token=SP00JHYPV1)](https://codecov.io/github/ouziel-slama/zeldhash-protocol)
-[![Format](https://github.com/ouziel-slama/zeldhash-protocol/actions/workflows/fmt.yml/badge.svg)](https://github.com/ouziel-slama/zeldhash-protocol/actions/workflows/fmt.yml)
-[![Clippy](https://github.com/ouziel-slama/zeldhash-protocol/actions/workflows/clippy.yml/badge.svg)](https://github.com/ouziel-slama/zeldhash-protocol/actions/workflows/clippy.yml)
+[![Tests](https://github.com/zeldhash/zeldhash-protocol/actions/workflows/tests.yml/badge.svg)](https://github.com/zeldhash/zeldhash-protocol/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/github/zeldhash/zeldhash-protocol/graph/badge.svg?token=SP00JHYPV1)](https://codecov.io/github/zeldhash/zeldhash-protocol)
+[![Format](https://github.com/zeldhash/zeldhash-protocol/actions/workflows/fmt.yml/badge.svg)](https://github.com/zeldhash/zeldhash-protocol/actions/workflows/fmt.yml)
+[![Clippy](https://github.com/zeldhash/zeldhash-protocol/actions/workflows/clippy.yml/badge.svg)](https://github.com/zeldhash/zeldhash-protocol/actions/workflows/clippy.yml)
 [![Crates.io](https://img.shields.io/crates/v/zeldhash-protocol.svg)](https://crates.io/crates/zeldhash-protocol)
 [![Docs.rs](https://docs.rs/zeldhash-protocol/badge.svg)](https://docs.rs/zeldhash-protocol)
 
